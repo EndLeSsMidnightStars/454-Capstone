@@ -14,10 +14,10 @@ NO_SIGNAL_THRESHOLD = 60  # Threshold in dB to determine if there is no signific
 SMOOTHING_FACTOR = 0.8  # Smoothing factor for exponential moving average
 
 # Distance between microphones (variable)
-mic_distance = 1  # Distance between microphones in meters (can be changed)
+mic_distance = 5  # Distance between microphones in meters (can be changed)
 
 # Maximum Z distance
-MAX_Z_DISTANCE = 1  # Maximum z distance the system can detect
+MAX_Z_DISTANCE = 2  # Maximum z distance the system can detect
 
 # Microphone positions (variables)
 mic_positions = np.array([
@@ -30,7 +30,7 @@ mic_positions = np.array([
 # Calibration data (to be updated with actual measurements)
 # SPL readings at known distances (in meters)
 calibration_distances = np.array([1, 2, 3, 4, 5])  # Example distances
-calibration_spl_values = np.array([94, 88, 84, 80, 77])  # Corresponding SPL readings
+calibration_spl_values = np.array([68, 65, 60, 59, 58])  # Corresponding SPL readings
 
 # Calibration constants (to be determined through calibration)
 # These will be updated by the calibrate_spl_to_distance function
@@ -236,7 +236,12 @@ def start_live_plot():
     smoothed_position = np.array([mic_distance / 2, mic_distance / 2, 0])
 
     # Create initial scatter plot with one point
-    sc = ax.scatter(smoothed_position[0], smoothed_position[1], smoothed_position[2], c='r', marker='o')
+    sc = ax.scatter(smoothed_position[0], smoothed_position[1], smoothed_position[2], c='r', marker='o', label='Drone Position')
+
+    # Add vertical dashed line to indicate height
+    line, = ax.plot([smoothed_position[0], smoothed_position[0]],
+                    [smoothed_position[1], smoothed_position[1]],
+                    [0, smoothed_position[2]], linestyle='--', color='b', label='Height Indicator')
 
     ax.set_xlim(0, mic_distance)
     ax.set_ylim(0, mic_distance)
@@ -245,6 +250,9 @@ def start_live_plot():
     ax.set_ylabel('Y Position (m)')
     ax.set_zlabel('Z Position (m)')
     ax.set_title('Live Drone Position')
+
+    # Add legend
+    ax.legend()
 
     # Function to handle plot close event
     def on_close(event):
@@ -285,6 +293,12 @@ def start_live_plot():
 
             # Update live plot
             sc._offsets3d = (np.array([smoothed_position[0]]), np.array([smoothed_position[1]]), np.array([smoothed_position[2]]))
+
+            # Update vertical line
+            line.set_data([smoothed_position[0], smoothed_position[0]],
+                          [smoothed_position[1], smoothed_position[1]])
+            line.set_3d_properties([0, smoothed_position[2]])
+
             plt.draw()
             plt.pause(0.2)  # Adjust to control the speed of the live update
     except KeyboardInterrupt:
