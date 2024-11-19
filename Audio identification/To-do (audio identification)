@@ -1,5 +1,0 @@
-To-do list for audio identification
-
-- Get live feed FFT 2 second rolling window for audio
-- Find dataset of frequency signature for drones
-- Create activation function (confirms if it does hear a drone signature)

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import hamming
+from scipy.signal.windows import hamming
 import sounddevice as sd
 from scipy.fft import fft, fftfreq
 from scipy.optimize import curve_fit
@@ -287,6 +287,11 @@ def start_live_plot():
 
             # Print the estimated position
             print(f"Estimated Position - X: {smoothed_position[0]:.2f} m, Y: {smoothed_position[1]:.2f} m, Z: {smoothed_position[2]:.2f} m")
+            xyz_coord = np.round([
+                smoothed_position[0] - (mic_distance / 2),
+                smoothed_position[1] - (mic_distance / 2),
+                smoothed_position[2] - (MAX_Z_DISTANCE / 2)
+                ], 2)  # change to be input from audio code
 
             # Call the targeting system driver with the estimated position
             targeting_system_driver(smoothed_position)
