@@ -10,6 +10,7 @@ required_libraries = [
     "matplotlib",             # For plotting
     "scipy",                  # For signal processing
     "sounddevice",            # For audio capture
+    "PySide6",                # For GUI components
 ]
 
 # Function to install packages
@@ -34,3 +35,4 @@ def import_hamming():
 if __name__ == "__main__":
     install_packages(required_libraries)
     import_hamming()
+    print("All requirement libraries have been installed successfully.")
