@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.signal.windows import hamming
 import sounddevice as sd
 from scipy.fft import fft, fftfreq
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, least_squares
 from mpl_toolkits.mplot3d import Axes3D
 
 # Simulation parameters
@@ -32,37 +32,36 @@ mic_positions = np.array([
 calibration_distances = np.array([1, 2, 3, 4, 5])  # Example distances
 calibration_spl_values = np.array([68, 65, 60, 59, 58])  # Corresponding SPL readings
 
-# Calibration constants (to be determined through calibration)
-# These will be updated by the calibrate_spl_to_distance function
-calibration_params = None  # Placeholder for calibration parameters (a, b)
+# Calibration constant (to be determined through calibration)
+calibration_param = None  # Placeholder for calibration parameter c
 tuning_factor = 1.0  # Tuning factor 'k' for distance estimation
 
 # Function for calibration
 def calibrate_spl_to_distance(spl_values, distances):
     """
     Calibrate the relationship between SPL and distance.
-    Returns calibration constants a and b.
+    Returns calibration constant c.
     """
-    def model_func(d, a, b):
-        return a - 20 * np.log10(d) + b
+    def model_func(d, c):
+        return c - 20 * np.log10(d)
 
-    # Use curve fitting to find the best-fit parameters
+    # Use curve fitting to find the best-fit parameter
     params, _ = curve_fit(model_func, distances, spl_values)
-    return params  # Returns (a, b)
+    return params  # Returns (c,)
 
 # Perform calibration using the provided calibration data
-calibration_params = calibrate_spl_to_distance(calibration_spl_values, calibration_distances)
-a_calib, b_calib = calibration_params
+calibration_param = calibrate_spl_to_distance(calibration_spl_values, calibration_distances)
+c_calib = calibration_param[0]
 
 # Function to estimate distance from SPL using calibration and tuning factor
-def estimate_distance_from_spl(spl, a, b, k=1.0):
+def estimate_distance_from_spl(spl, c, k=1.0):
     """
-    Estimate the distance from SPL using calibrated parameters and tuning factor.
+    Estimate the distance from SPL using calibrated parameter and tuning factor.
     """
-    distance = k * 10 ** ((a + b - spl) / 20)
+    distance = k * 10 ** ((c - spl) / 20)
     return distance
 
-# Function to estimate drone position based on trilateration
+# Function to estimate drone position based on full 3D trilateration
 def estimate_position(mic_spl_values):
     mic_spl_values = np.array(mic_spl_values)
 
@@ -71,55 +70,37 @@ def estimate_position(mic_spl_values):
         return np.array([mic_distance / 2, mic_distance / 2, 0])  # Default to center if no signal
 
     # Estimate distances using the calibrated function and tuning factor
-    distances = estimate_distance_from_spl(mic_spl_values, a_calib, b_calib, tuning_factor)
+    distances = estimate_distance_from_spl(mic_spl_values, c_calib, tuning_factor)
 
     # Avoid negative distances
     distances = np.maximum(distances, 1e-6)
 
-    # Extract positions
-    x1, y1, z1 = mic_positions[0]
-    x2, y2, z2 = mic_positions[1]
-    x3, y3, z3 = mic_positions[2]
-    x4, y4, z4 = mic_positions[3]
+    # Define the residuals function for least squares optimization
+    def residuals(variables, positions, distances):
+        x, y, z = variables
+        residuals = []
+        for (xi, yi, zi), di in zip(positions, distances):
+            # Calculate the difference between measured and calculated distances
+            calculated_distance = np.sqrt((x - xi)**2 + (y - yi)**2 + (z - zi)**2)
+            residual = calculated_distance - di
+            residuals.append(residual)
+        return residuals
 
-    d1, d2, d3, d4 = distances[:4]
+    # Initial guess for (x, y, z)
+    initial_guess = np.array([mic_distance / 2, mic_distance / 2, MAX_Z_DISTANCE / 2])
 
-    # Set up equations for trilateration using mics 1, 2, and 3
-    # Equation A
-    A = np.array([
-        [x2 - x1, y2 - y1],
-        [x3 - x1, y3 - y1]
-    ])
+    # Solve the system using least squares
+    result = least_squares(
+        residuals,
+        initial_guess,
+        args=(mic_positions, distances)
+    )
 
-    # Equation B
-    B = 0.5 * np.array([
-        d1**2 - d2**2 - x1**2 + x2**2 - y1**2 + y2**2,
-        d1**2 - d3**2 - x1**2 + x3**2 - y1**2 + y3**2
-    ])
+    x, y, z = result.x
 
-    try:
-        # Solve for x and y
-        position_2d = np.linalg.solve(A, B)
-        x, y = position_2d
-    except np.linalg.LinAlgError:
-        # Singular matrix, cannot solve
-        x, y = mic_distance / 2, mic_distance / 2  # Default to center
-
-    # Constrain x and y within bounds
+    # Constrain x, y, z within bounds
     x = np.clip(x, 0, mic_distance)
     y = np.clip(y, 0, mic_distance)
-
-    # Calculate z using mic4
-    r_xy = np.sqrt((x - x4)**2 + (y - y4)**2)
-    d4 = distances[3]
-    z_squared = d4**2 - r_xy**2
-
-    if z_squared >= 0:
-        z = np.sqrt(z_squared)
-    else:
-        z = 0  # If negative due to noise, set z to 0
-
-    # Constrain z to be within [0, MAX_Z_DISTANCE]
     z = np.clip(z, 0, MAX_Z_DISTANCE)
 
     # Return the estimated position
@@ -291,7 +272,7 @@ def start_live_plot():
                 smoothed_position[0] - (mic_distance / 2),
                 smoothed_position[1] - (mic_distance / 2),
                 smoothed_position[2] - (MAX_Z_DISTANCE / 2)
-                ], 2)  # change to be input from audio code
+                ], 2)  # Adjusted coordinates
 
             # Call the targeting system driver with the estimated position
             targeting_system_driver(smoothed_position)
