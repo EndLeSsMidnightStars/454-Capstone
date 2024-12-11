@@ -1,11 +1,10 @@
 import cv2
-from mss import mss
-
+# from mss import mss # for IR camera
 import time
 import serial
 import math
 import numpy as np
-
+import tkinter as tk
 
 ### User Parameters ###
 
@@ -37,55 +36,19 @@ def live_video(camera_port=0):
     cv2.destroyAllWindows()
 
 def find_motion(uno, uno2, current_x_steps, current_y_steps, callback, camera_port=0, show_video=False):
-    bounding_box = {'top': 0, 'left': 0, 'width': 500, 'height': 420}
-    sct = mss()
-    # camera = cv2.VideoCapture(camera_port, cv2.CAP_DSHOW)
-  #   time.sleep(0.25)
-    # initialize the first frame in the video stream
-    # firstFrame = None
-    # tempFrame = None
-    # count = 0
-    # frame_counter = 0
-    # loop over the frames of the video
-    while True:
-        # c = None
-        # # grab the current frame and initialize the occupied/unoccupied
-        # # text
-        # (grabbed, frame) = camera.read()
-        # # # if the frame could not be grabbed, then we have reached the end
-        # # # of the video
-        # if not grabbed:
-        #     break
-        # # resize the frame, convert it to grayscale, and blur it
-        # #frame = imutils.resize(frame, width=500)
-        # gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        # gray = cv2.GaussianBlur(gray, (5, 5), 0)
-        # # if the first frame is None, initialize it
-        # # Periodically reset firstFrame
-        # if frame_counter % 150 == 0:  # Reset every 150 frames
-        #     firstFrame = None
-        #     print("Resetting background frame...")
+    bounding_box = {'top': 62, 'left': 17, 'width': 480, 'height': 360}
 
-        # if firstFrame is None:
-        #     print("Waiting for video to adjust...")
-        #     if tempFrame is None:
-        #         tempFrame = gray
-        #         continue
-        #     else:
-        #         delta = cv2.absdiff(tempFrame, gray)
-        #         tempFrame = gray
-        #         tst = cv2.threshold(delta, 20, 255, cv2.THRESH_BINARY)[1]
-        #         tst = cv2.dilate(tst, None, iterations=3)
-        #         if count > 30:
-        #             print("Done.\n Waiting for motion.")
-        #             if not cv2.countNonZero(tst) > 0:
-        #                 firstFrame = gray
-        #             else:
-        #                 continue
-        #         else:
-        #             count += 1
-        #             continue
-        # compute the absolute difference between the current frame and
+    # sct = mss()
+    # camera = cv2.VideoCapture(camera_port, cv2.CAP_DSHOW)
+    
+    root = tk.Tk()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    root.destroy()
+
+    cv2.namedWindow("Security Feed", cv2.WINDOW_NORMAL)
+    while True:
+
         # first frame
         # ret, frame1 = camera.read()
         # ret, frame2 = camera.read()
@@ -125,6 +88,16 @@ def find_motion(uno, uno2, current_x_steps, current_y_steps, callback, camera_po
         # show the frame and record if the user presses a key
         if show_video:
             cv2.imshow("Security Feed", frame1)
+
+            # Get the size of the frame (width, height)
+            frame_height, frame_width = frame1.shape[:2]
+
+            # Calculate the center position
+            x = (screen_width - frame_width) // 2
+            y = (screen_height - frame_height) // 2
+
+            # Move the window to the center
+            cv2.moveWindow("Security Feed", x, y)
             key = cv2.waitKey(1) & 0xFF
             # if the `q` key is pressed, break from the lop
             if key == ord("q"):
@@ -287,13 +260,13 @@ current_y_steps = 0
 current_azimuth_angle = 0  # Horizontal angle in degrees (0 is along positive x-axis)
 current_elevation_angle = 0  # Vertical angle in degrees (0 is parallel to xy plane)
 
-xyz_coord = [] # change to be input from audio code
+xyz_coord = [0, -1, 0] # change to be input from audio code
 
 try:       
     calibrate(uno, uno2)
-    uno.write(b'o')
-    time.sleep(1)
-    move_to_xyz(xyz_coord[0], xyz_coord[1], xyz_coord[2], uno, uno2)
+    # uno.write(b'o')
+    # time.sleep(1)
+    # move_to_xyz(xyz_coord[0], xyz_coord[1], xyz_coord[2], uno, uno2)
     motion_detection(uno, uno2, current_x_steps, current_y_steps, show_video=True)
 except KeyboardInterrupt:
     print("\nProgram interrupted by user.")

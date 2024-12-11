@@ -9,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 # Simulation parameters
 demo_mode = False  # Set to False to capture from multiple microphones
 Fs = 48000  # Sampling frequency (Hz)
-freq_range = (200, 5000)  # Frequency range for analysis (in Hz)
+freq_range = (200, 500)  # Frequency range for analysis (in Hz)
 NO_SIGNAL_THRESHOLD = 60  # Threshold in dB to determine if there is no significant signal
 SMOOTHING_FACTOR = 0.8  # Smoothing factor for exponential moving average
 
@@ -17,7 +17,7 @@ SMOOTHING_FACTOR = 0.8  # Smoothing factor for exponential moving average
 mic_distance = 5  # Distance between microphones in meters (can be changed)
 
 # Maximum Z distance
-MAX_Z_DISTANCE = 2  # Maximum z distance the system can detect
+MAX_Z_DISTANCE = 5  # Maximum z distance the system can detect
 
 # Microphone positions (variables)
 mic_positions = np.array([
@@ -29,12 +29,12 @@ mic_positions = np.array([
 
 # Calibration data (to be updated with actual measurements)
 # SPL readings at known distances (in meters)
-calibration_distances = np.array([1, 2, 3, 4, 5])  # Example distances
-calibration_spl_values = np.array([68, 65, 60, 59, 58])  # Corresponding SPL readings
+calibration_distances = np.array([1, 2, 3, 4])  # Example distances
+calibration_spl_values = np.array([76, 74, 72, 70])  # Corresponding SPL readings
 
 # Calibration constant (to be determined through calibration)
 calibration_param = None  # Placeholder for calibration parameter c
-tuning_factor = 1.0  # Tuning factor 'k' for distance estimation
+tuning_factor = 2  # Tuning factor 'k' for distance estimation
 
 # Function for calibration
 def calibrate_spl_to_distance(spl_values, distances):
